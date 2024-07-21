@@ -1,6 +1,6 @@
 pipeline {
 
-    agent  any
+    agent any
 
     parameters {
         booleanParam(name: 'autoApprove', defaultValue: false, description: 'Automatically run apply after generating plan?')
@@ -13,9 +13,7 @@ pipeline {
     stages {
         stage('checkout') {
             steps {
-                 script{
-                            git "https://github.com/partho-dev/terraform-jenkis.git"
-                        }
+                    git branch: 'main', url: "https://github.com/partho-dev/terraform-jenkis.git"
                 }
             }
 
