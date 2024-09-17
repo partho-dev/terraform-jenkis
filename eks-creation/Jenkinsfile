@@ -3,29 +3,31 @@ pipeline {
 
   parameters {
     string(name: 'AWS_REGION', defaultValue: 'ap-south-1', description: 'AWS region for EKS')
-    string(name: 'VPC_CIDR', defaultValue: '10.0.0.0/16', description: 'VPC CIDR Block')
+    // string(name: 'AWS_PROFILE', defaultValue: 'ergonnex-infra-dev', description: 'AWS CLI profile for authentication')
+    string(name: 'VPC_CIDR', defaultValue: '["10.0.0.0/16"]', description: 'VPC CIDR Block')
     string(name: 'PUBLIC_SUBNETS', defaultValue: '["10.0.1.0/24","10.0.2.0/24"]', description: 'Public Subnet CIDRs')
     string(name: 'PRIVATE_SUBNETS', defaultValue: '["10.0.3.0/24","10.0.4.0/24"]', description: 'Private Subnet CIDRs')
-    string(name: 'CLUSTER_NAME', defaultValue: 'eks-cluster', description: 'EKS Cluster Name')
-    string(name: 'CLUSTER_VERSION', defaultValue: '1.30', description: 'EKS Cluster Version')
-    string(name: 'INSTANCE_TYPE', defaultValue: 't2.small', description: 'EC2 instance type for nodes')
-    string(name: 'MIN_SIZE', defaultValue: '1', description: 'Min number of worker nodes')
-    string(name: 'MAX_SIZE', defaultValue: '2', description: 'Max number of worker nodes')
-    string(name: 'DESIRED_SIZE', defaultValue: '1', description: 'Desired number of worker nodes')
+    // string(name: 'CLUSTER_NAME', defaultValue: 'eks-cluster', description: 'EKS Cluster Name')
+    // string(name: 'CLUSTER_VERSION', defaultValue: '1.30', description: 'EKS Cluster Version')
+    // string(name: 'INSTANCE_TYPE', defaultValue: 't2.small', description: 'EC2 instance type for nodes')
+    // string(name: 'MIN_SIZE', defaultValue: '1', description: 'Min number of worker nodes')
+    // string(name: 'MAX_SIZE', defaultValue: '2', description: 'Max number of worker nodes')
+    // string(name: 'DESIRED_SIZE', defaultValue: '1', description: 'Desired number of worker nodes')
     choice(name: 'ACTION', choices: ['apply', 'destroy'], description: 'Choose Terraform Action: Apply or Destroy')
   }
 
   environment {
     AWS_REGION         = "${params.AWS_REGION}"
+    // AWS_PROFILE        = "${params.AWS_PROFILE}"
     VPC_CIDR           = "${params.VPC_CIDR}"
     PUBLIC_SUBNETS     = "${params.PUBLIC_SUBNETS}"
     PRIVATE_SUBNETS    = "${params.PRIVATE_SUBNETS}"
-    CLUSTER_NAME       = "${params.CLUSTER_NAME}"
-    CLUSTER_VERSION    = "${params.CLUSTER_VERSION}"
-    INSTANCE_TYPE      = "${params.INSTANCE_TYPE}"
-    MIN_SIZE           = "${params.MIN_SIZE}"
-    MAX_SIZE           = "${params.MAX_SIZE}"
-    DESIRED_SIZE       = "${params.DESIRED_SIZE}"
+    // CLUSTER_NAME       = "${params.CLUSTER_NAME}"
+    // CLUSTER_VERSION    = "${params.CLUSTER_VERSION}"
+    // INSTANCE_TYPE      = "${params.INSTANCE_TYPE}"
+    // MIN_SIZE           = "${params.MIN_SIZE}"
+    // MAX_SIZE           = "${params.MAX_SIZE}"
+    // DESIRED_SIZE       = "${params.DESIRED_SIZE}"
     ACTION             = "${params.ACTION}"
   }
 
@@ -33,7 +35,7 @@ pipeline {
     stage('Checkout Code') {
       steps {
         echo "<==========Cloning the Repo=================>"
-        git 'https://github.com/partho-dev/terraform-jenkis.git'
+        git branch: 'main', url: 'https://github.com/partho-dev/terraform-jenkis.git'
       }
     }
 
@@ -59,12 +61,13 @@ pipeline {
             -var="vpc_cidr=${VPC_CIDR}" \
             -var="pub_sub=${PUBLIC_SUBNETS}" \
             -var="priv_sub=${PRIVATE_SUBNETS}" \
-            -var="cluster_name=${CLUSTER_NAME}" \
-            -var="cluster_version=${CLUSTER_VERSION}" \
-            -var="node_instance_type=${INSTANCE_TYPE}" \
-            -var="min_capacity=${MIN_SIZE}" \
-            -var="max_capacity=${MAX_SIZE}" \
-            -var="desired_capacity=${DESIRED_SIZE}"
+            # -var="aws_profile=${AWS_PROFILE}" \
+            # -var="cluster_name=${CLUSTER_NAME}" \
+            # -var="cluster_version=${CLUSTER_VERSION}" \
+            # -var="node_instance_type=${INSTANCE_TYPE}" \
+            # -var="min_capacity=${MIN_SIZE}" \
+            # -var="max_capacity=${MAX_SIZE}" \
+            # -var="desired_capacity=${DESIRED_SIZE}"
           '''
         }
       }
@@ -87,12 +90,13 @@ pipeline {
             -var="vpc_cidr=${VPC_CIDR}" \
             -var="pub_sub=${PUBLIC_SUBNETS}" \
             -var="priv_sub=${PRIVATE_SUBNETS}" \
-            -var="cluster_name=${CLUSTER_NAME}" \
-            -var="cluster_version=${CLUSTER_VERSION}" \
-            -var="node_instance_type=${INSTANCE_TYPE}" \
-            -var="min_capacity=${MIN_SIZE}" \
-            -var="max_capacity=${MAX_SIZE}" \
-            -var="desired_capacity=${DESIRED_SIZE}"
+            # -var="aws_profile=${AWS_PROFILE}" \
+            # -var="cluster_name=${CLUSTER_NAME}" \
+            # -var="cluster_version=${CLUSTER_VERSION}" \
+            # -var="node_instance_type=${INSTANCE_TYPE}" \
+            # -var="min_capacity=${MIN_SIZE}" \
+            # -var="max_capacity=${MAX_SIZE}" \
+            # -var="desired_capacity=${DESIRED_SIZE}"
           '''
         }
       }
