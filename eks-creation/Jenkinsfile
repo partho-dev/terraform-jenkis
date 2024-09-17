@@ -1,0 +1,78 @@
+pipeline {
+  agent any
+  parameters {
+    string(name: 'AWS_REGION', defaultValue: 'ap-south-1', description: 'AWS region for EKS')
+    string(name: 'CLUSTER_NAME', defaultValue: 'demo-eks', description: 'EKS Cluster Name')
+    string(name: 'NODE_GROUP_NAME', defaultValue: 'my-nodes', description: 'Name of the node group')
+    string(name: 'NODE_INSTANCE_TYPE', defaultValue: 't3.medium', description: 'EC2 instance type for nodes')
+    string(name: 'DESIRED_CAPACITY', defaultValue: '2', description: 'Desired number of worker nodes')
+    string(name: 'MAX_CAPACITY', defaultValue: '3', description: 'Max number of worker nodes')
+    string(name: 'MIN_CAPACITY', defaultValue: '1', description: 'Min number of worker nodes')
+  }
+  environment {
+    AWS_REGION = "${params.AWS_REGION}"
+    CLUSTER_NAME = "${params.CLUSTER_NAME}"
+    NODE_GROUP_NAME = "${params.NODE_GROUP_NAME}"
+    NODE_INSTANCE_TYPE = "${params.NODE_INSTANCE_TYPE}"
+    DESIRED_CAPACITY = "${params.DESIRED_CAPACITY}"
+    MAX_CAPACITY = "${params.MAX_CAPACITY}"
+    MIN_CAPACITY = "${params.MIN_CAPACITY}"
+  }
+  stages {
+    stage('Checkout Code') {
+      steps {
+        git 'https://your-repo-url.git'
+      }
+    }
+    stage('Terraform Init') {
+      steps {
+        echo "<==========Initialising the terraform=================>"
+        dir('eks-creation'){
+            sh '''
+            terraform init \
+            // -backend-config="bucket=my-terraform-state-bucket" \
+            // -backend-config="key=eks/terraform.tfstate" \
+            -backend-config="region=${AWS_REGION}" \
+            // -backend-config="dynamodb_table=terraform-state-lock"
+        '''
+        }
+
+      }
+    }
+    stage('Terraform Plan') {
+      steps {
+        echo "<==========Dry Run the terraform=================>"
+        dir('eks-creation') {
+        sh '''
+          terraform plan \
+            -var="region=${AWS_REGION}" \
+            -var="cluster_name=${CLUSTER_NAME}" \
+            -var="node_group_name=${NODE_GROUP_NAME}" \
+            -var="node_instance_type=${NODE_INSTANCE_TYPE}" \
+            -var="desired_capacity=${DESIRED_CAPACITY}" \
+            -var="max_capacity=${MAX_CAPACITY}" \
+            -var="min_capacity=${MIN_CAPACITY}"
+        '''
+        }
+      }
+    }
+    stage('Terraform Apply') {
+      steps {
+        echo "<==========Apply the terraform=================>"
+        dir('eks-creation'){
+        sh '''
+          terraform apply -auto-approve \
+            -var="region=${AWS_REGION}" \
+            -var="cluster_name=${CLUSTER_NAME}" \
+            -var="node_group_name=${NODE_GROUP_NAME}" \
+            -var="node_instance_type=${NODE_INSTANCE_TYPE}" \
+            -var="desired_capacity=${DESIRED_CAPACITY}" \
+            -var="max_capacity=${MAX_CAPACITY}" \
+            -var="min_capacity=${MIN_CAPACITY}"
+        '''
+        }
+
+      }
+    }
+  }
+}
