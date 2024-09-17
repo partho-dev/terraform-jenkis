@@ -40,7 +40,6 @@ module "eks" {
 
   cluster_endpoint_public_access = true
 
-  # Use the correct security group associated with the VPC
   cluster_security_group_id = module.vpc.default_security_group_id
 
   vpc_id     = module.vpc.vpc_id

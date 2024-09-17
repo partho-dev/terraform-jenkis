@@ -1,77 +1,100 @@
 pipeline {
   agent any
+
   parameters {
     string(name: 'AWS_REGION', defaultValue: 'ap-south-1', description: 'AWS region for EKS')
-    string(name: 'CLUSTER_NAME', defaultValue: 'demo-eks', description: 'EKS Cluster Name')
-    string(name: 'NODE_GROUP_NAME', defaultValue: 'my-nodes', description: 'Name of the node group')
-    string(name: 'NODE_INSTANCE_TYPE', defaultValue: 't3.medium', description: 'EC2 instance type for nodes')
-    string(name: 'DESIRED_CAPACITY', defaultValue: '2', description: 'Desired number of worker nodes')
-    string(name: 'MAX_CAPACITY', defaultValue: '3', description: 'Max number of worker nodes')
-    string(name: 'MIN_CAPACITY', defaultValue: '1', description: 'Min number of worker nodes')
+    string(name: 'VPC_CIDR', defaultValue: '10.0.0.0/16', description: 'VPC CIDR Block')
+    string(name: 'PUBLIC_SUBNETS', defaultValue: '["10.0.1.0/24","10.0.2.0/24"]', description: 'Public Subnet CIDRs')
+    string(name: 'PRIVATE_SUBNETS', defaultValue: '["10.0.3.0/24","10.0.4.0/24"]', description: 'Private Subnet CIDRs')
+    string(name: 'CLUSTER_NAME', defaultValue: 'eks-cluster', description: 'EKS Cluster Name')
+    string(name: 'CLUSTER_VERSION', defaultValue: '1.30', description: 'EKS Cluster Version')
+    string(name: 'INSTANCE_TYPE', defaultValue: 't2.small', description: 'EC2 instance type for nodes')
+    string(name: 'MIN_SIZE', defaultValue: '1', description: 'Min number of worker nodes')
+    string(name: 'MAX_SIZE', defaultValue: '2', description: 'Max number of worker nodes')
+    string(name: 'DESIRED_SIZE', defaultValue: '1', description: 'Desired number of worker nodes')
+    choice(name: 'ACTION', choices: ['apply', 'destroy'], description: 'Choose Terraform Action: Apply or Destroy')
   }
+
   environment {
-    AWS_REGION = "${params.AWS_REGION}"
-    CLUSTER_NAME = "${params.CLUSTER_NAME}"
-    NODE_GROUP_NAME = "${params.NODE_GROUP_NAME}"
-    NODE_INSTANCE_TYPE = "${params.NODE_INSTANCE_TYPE}"
-    DESIRED_CAPACITY = "${params.DESIRED_CAPACITY}"
-    MAX_CAPACITY = "${params.MAX_CAPACITY}"
-    MIN_CAPACITY = "${params.MIN_CAPACITY}"
+    AWS_REGION         = "${params.AWS_REGION}"
+    VPC_CIDR           = "${params.VPC_CIDR}"
+    PUBLIC_SUBNETS     = "${params.PUBLIC_SUBNETS}"
+    PRIVATE_SUBNETS    = "${params.PRIVATE_SUBNETS}"
+    CLUSTER_NAME       = "${params.CLUSTER_NAME}"
+    CLUSTER_VERSION    = "${params.CLUSTER_VERSION}"
+    INSTANCE_TYPE      = "${params.INSTANCE_TYPE}"
+    MIN_SIZE           = "${params.MIN_SIZE}"
+    MAX_SIZE           = "${params.MAX_SIZE}"
+    DESIRED_SIZE       = "${params.DESIRED_SIZE}"
+    ACTION             = "${params.ACTION}"
   }
+
   stages {
     stage('Checkout Code') {
       steps {
-        git 'https://your-repo-url.git'
+        echo "<==========Cloning the Repo=================>"
+        git 'https://github.com/partho-dev/terraform-jenkis.git'
       }
     }
+
     stage('Terraform Init') {
       steps {
         echo "<==========Initialising the terraform=================>"
-        dir('eks-creation'){
-            sh '''
-            terraform init \
-            // -backend-config="bucket=my-terraform-state-bucket" \
-            // -backend-config="key=eks/terraform.tfstate" \
-            -backend-config="region=${AWS_REGION}" \
-            // -backend-config="dynamodb_table=terraform-state-lock"
-        '''
+        dir('eks-creation') {
+          sh '''
+          terraform init \
+          -backend-config="region=${AWS_REGION}"
+          '''
         }
-
       }
     }
+
     stage('Terraform Plan') {
       steps {
-        echo "<==========Dry Run the terraform=================>"
+        echo "<==========Planning the terraform changes=================>"
         dir('eks-creation') {
-        sh '''
+          sh '''
           terraform plan \
             -var="region=${AWS_REGION}" \
+            -var="vpc_cidr=${VPC_CIDR}" \
+            -var="pub_sub=${PUBLIC_SUBNETS}" \
+            -var="priv_sub=${PRIVATE_SUBNETS}" \
             -var="cluster_name=${CLUSTER_NAME}" \
-            -var="node_group_name=${NODE_GROUP_NAME}" \
-            -var="node_instance_type=${NODE_INSTANCE_TYPE}" \
-            -var="desired_capacity=${DESIRED_CAPACITY}" \
-            -var="max_capacity=${MAX_CAPACITY}" \
-            -var="min_capacity=${MIN_CAPACITY}"
-        '''
+            -var="cluster_version=${CLUSTER_VERSION}" \
+            -var="node_instance_type=${INSTANCE_TYPE}" \
+            -var="min_capacity=${MIN_SIZE}" \
+            -var="max_capacity=${MAX_SIZE}" \
+            -var="desired_capacity=${DESIRED_SIZE}"
+          '''
         }
       }
     }
-    stage('Terraform Apply') {
-      steps {
-        echo "<==========Apply the terraform=================>"
-        dir('eks-creation'){
-        sh '''
-          terraform apply -auto-approve \
-            -var="region=${AWS_REGION}" \
-            -var="cluster_name=${CLUSTER_NAME}" \
-            -var="node_group_name=${NODE_GROUP_NAME}" \
-            -var="node_instance_type=${NODE_INSTANCE_TYPE}" \
-            -var="desired_capacity=${DESIRED_CAPACITY}" \
-            -var="max_capacity=${MAX_CAPACITY}" \
-            -var="min_capacity=${MIN_CAPACITY}"
-        '''
-        }
 
+    stage('Terraform Apply or Destroy') {
+      steps {
+        echo "<==========Applying or Destroying the infrastructure=================>"
+        dir('eks-creation') {
+          script {
+            if ("${ACTION}" == "apply") {
+              echo "Applying Terraform"
+            } else if ("${ACTION}" == "destroy") {
+              echo "Destroying Terraform"
+            }
+          }
+          sh '''
+          terraform ${ACTION} -auto-approve \
+            -var="region=${AWS_REGION}" \
+            -var="vpc_cidr=${VPC_CIDR}" \
+            -var="pub_sub=${PUBLIC_SUBNETS}" \
+            -var="priv_sub=${PRIVATE_SUBNETS}" \
+            -var="cluster_name=${CLUSTER_NAME}" \
+            -var="cluster_version=${CLUSTER_VERSION}" \
+            -var="node_instance_type=${INSTANCE_TYPE}" \
+            -var="min_capacity=${MIN_SIZE}" \
+            -var="max_capacity=${MAX_SIZE}" \
+            -var="desired_capacity=${DESIRED_SIZE}"
+          '''
+        }
       }
     }
   }
