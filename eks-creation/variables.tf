@@ -17,5 +17,5 @@ variable "priv_sub" {
 # variable "aws_profile" {
 #   description = "AWS CLI profile to use for authentication"
 #   type        = string
-#   default     = "ergonnex-infra-dev"
+#   default     = "my-infra-dev"
 # }
